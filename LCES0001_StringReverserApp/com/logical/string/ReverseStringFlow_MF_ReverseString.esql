@@ -1,0 +1,31 @@
+BROKER SCHEMA com.logical.string
+
+CREATE COMPUTE MODULE ReverseStringFlow_MF_ReverseString
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		-- Reference to the incoming JSON request string
+		DECLARE inputMessage REFERENCE TO InputRoot.JSON.Data.requestString;
+		
+		-- Declare necessary variables for string processing
+		DECLARE inputString, reversedString CHARACTER '';
+		DECLARE stringLength INTEGER;
+		DECLARE counter INTEGER;
+		
+		-- Extract input string from message and initialize length and counter variables
+		SET inputString = inputMessage.inputString;
+		SET stringLength = LENGTH(inputString);
+		SET counter = stringLength;
+		
+		-- Reverse the input string using a backward loop
+		WHILE counter > 0 DO
+			SET reversedString = reversedString || SUBSTRING(inputString FROM counter FOR 1);
+			SET counter = counter - 1;
+		END WHILE;
+		
+		-- Construct JSON response with the reversed string
+		CREATE LASTCHILD OF OutputRoot.JSON DOMAIN('JSON') NAME 'Data';
+		SET OutputRoot.JSON.Data.responseString.reversedString = reversedString;
+		
+		RETURN TRUE;
+	END;
+END MODULE;
