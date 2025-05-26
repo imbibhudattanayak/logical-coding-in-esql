@@ -1,0 +1,45 @@
+BROKER SCHEMA com.logical.string
+
+CREATE COMPUTE MODULE StringFrequencyAnalyzer_MF_FriquencyAnalyzer
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		-- Declare a reference to the input string from JSON input message
+		DECLARE inputMessage REFERENCE TO InputRoot.JSON.Data.requestString;
+		
+		-- Declare variables for string processing
+		DECLARE inputString CHARACTER inputMessage.inputString;
+		DECLARE outputString, currentCharacter CHARACTER '';
+		DECLARE counter INTEGER 0;
+		DECLARE stringLength INTEGER LENGTH(inputString);
+		DECLARE isNewWord BOOLEAN FALSE;
+		
+		-- Loop through each character in the input string
+		WHILE counter <= stringLength DO
+			-- Get the character at the current position
+			SET currentCharacter = SUBSTRING(inputString FROM counter FOR 1);
+			
+			-- If it is the start of a word and not a space, capitalize the letter
+			IF isNewWord AND currentCharacter <> ' ' THEN
+				SET outputString = outputString || UPPER(currentCharacter);
+				SET isNewWord = FALSE;
+			ELSE
+				-- Otherwise, just add the lowercase character
+				SET outputString = outputString || LOWER(currentCharacter);
+			END IF;
+			
+			 -- If the character is a space, mark the next character as start of a new word
+            IF currentCharacter = ' ' THEN
+                SET isNewWord = TRUE;
+            END IF;
+            
+            -- Increase the counter variable value to move to the next character
+            SET counter = counter + 1;
+		END WHILE; 
+		
+		-- Create JSON output and set the final capitalized string
+		CREATE LASTCHILD OF OutputRoot.JSON DOMAIN('JSON') NAME 'Data';
+		SET OutputRoot.JSON.Data.responseString.outputString = outputString;
+				
+		RETURN TRUE;
+	END;
+END MODULE;

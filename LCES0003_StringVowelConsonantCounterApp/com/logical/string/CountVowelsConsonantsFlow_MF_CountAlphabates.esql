@@ -1,0 +1,49 @@
+BROKER SCHEMA com.logical.string
+
+CREATE COMPUTE MODULE CountVowelsConsonantsFlow_MF_CountAlphabates
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		-- Reference to the incoming JSON request string
+		DECLARE inputMessage REFERENCE TO InputRoot.JSON.Data.requestString;
+		
+		-- Declare necessary variables for string processing
+		DECLARE inputString CHARACTER '';
+		DECLARE charAlpha CHARACTER;
+		DECLARE index INTEGER;
+		DECLARE stringLength INTEGER;
+		DECLARE vowelCount INTEGER 0;
+		DECLARE consonantCount INTEGER 0;
+		
+		-- Extract input string from input message
+		SET inputString = UPPER(inputMessage.inputString);
+		
+		-- Get the string length and assign it to length variable, initialize index variable as well
+		SET stringLength = LENGTH(inputString);
+		SET index = 1;
+		
+		-- Loop through each character
+		WHILE index <= stringLength DO
+			SET charAlpha = SUBSTRING(inputString FROM index FOR 1);
+			
+			-- Check for Alphabates
+			IF charAlpha >= 'A' AND charAlpha <= 'Z' THEN
+				-- Check if Vowel or not
+				IF charAlpha IN('A', 'E', 'I', 'O', 'U') THEN
+					SET vowelCount = vowelCount + 1;
+				ELSE
+					SET consonantCount = consonantCount + 1;
+				END IF;
+			END IF;
+			
+			-- Increasing the index value for each executions of while loop
+			SET index = index + 1;
+		END WHILE;
+		
+		-- Create JSON response with vowel and consonant counts
+		CREATE LASTCHILD OF OutputRoot.JSON DOMAIN('JSON') NAME 'Data';
+		SET OutputRoot.JSON.Data.responseString.vowelCount = vowelCount;
+		SET OutputRoot.JSON.Data.responseString.consonantCount = consonantCount;
+
+		RETURN TRUE;
+	END;
+END MODULE;

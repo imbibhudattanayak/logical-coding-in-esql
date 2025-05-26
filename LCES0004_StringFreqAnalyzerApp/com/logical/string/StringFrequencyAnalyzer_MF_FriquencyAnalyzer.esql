@@ -1,0 +1,59 @@
+BROKER SCHEMA com.logical.string
+
+CREATE COMPUTE MODULE StringFrequencyAnalyzer_MF_FriquencyAnalyzer
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		-- Declare a reference to the input string from JSON input message
+		DECLARE inputMessage REFERENCE TO InputRoot.JSON.Data.requestString;
+		
+		-- Declare variables for string processing
+		DECLARE stringLength INTEGER LENGTH(inputMessage.inputString);
+		DECLARE counter INTEGER 1;
+		DECLARE inputStringMessage,charInString CHARACTER;
+		
+		-- Store the input string in a local variable
+		SET inputStringMessage = inputMessage.inputString;
+		
+		-- Create a working tree in OutputLocalEnvironment to store character frequency
+		CREATE FIELD OutputLocalEnvironment.Variables.Frequency;
+		DECLARE oPutLERef REFERENCE TO OutputLocalEnvironment.Variables.Frequency;
+		
+		-- Loop through each character in the input string
+		WHILE counter <= stringLength DO
+			-- Extract and normalize the current character to uppercase
+			SET charInString = UPPER(SUBSTRING(inputStringMessage FROM counter FOR 1));
+			
+			-- Rename whitespace characters for clarity in output
+			IF charInString = ' ' THEN
+				SET charInString = 'SPACE';
+			END IF;
+			
+			-- Create a reference to the corresponding field in the frequency map
+			DECLARE freqRef REFERENCE TO oPutLERef.{charInString};
+			
+			-- If character is not present, initialize count to 1; otherwise increment
+			IF COALESCE(FIELDVALUE(freqRef),0) = 0 THEN
+				SET oPutLERef.{charInString} = 1;
+			ELSE
+				SET oPutLERef.{charInString} = FIELDVALUE(freqRef) + 1;
+			END IF;
+			
+			-- Move to the next character
+			SET counter = counter + 1;
+		END WHILE;
+		
+		-- Copy the character frequency data into the output JSON structure
+		MOVE oPutLERef FIRSTCHILD;
+		CREATE LASTCHILD OF OutputRoot.JSON DOMAIN('JSON') NAME 'Data';
+
+		WHILE LASTMOVE(oPutLERef) DO
+			SET OutputRoot.JSON.Data.responseString.frequency.{FIELDNAME(oPutLERef)} = oPutLERef;
+			MOVE oPutLERef NEXTSIBLING;
+		END WHILE;
+		
+		-- Clean up temporary frequency tree from OutputLocalEnvironment
+		DELETE FIELD OutputLocalEnvironment;
+
+		RETURN TRUE;
+	END;
+END MODULE;
