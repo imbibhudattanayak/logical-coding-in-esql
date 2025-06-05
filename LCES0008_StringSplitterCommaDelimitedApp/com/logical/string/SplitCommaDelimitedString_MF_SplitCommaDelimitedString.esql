@@ -1,0 +1,39 @@
+BROKER SCHEMA com.logical.string
+
+CREATE COMPUTE MODULE SplitCommaDelimitedString_MF_SplitCommaDelimitedString
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		-- Declare a reference to the input string from JSON input message
+		DECLARE inputMessage REFERENCE TO InputRoot.JSON.Data.requestString;
+		-- Declare variables for string processing
+		DECLARE inputString CHARACTER inputMessage.inputString;
+		DECLARE currentPosition, counter INTEGER 1;
+		DECLARE commaPosition INTEGER 1;
+		DECLARE splittedString CHARACTER;
+		
+		CREATE LASTCHILD OF OutputRoot.JSON DOMAIN('JSON') NAME 'Data';
+		CREATE FIELD OutputRoot.JSON.Data.responseString.outputStrings.String IDENTITY (JSON.Array)String;
+		
+		WHILE currentPosition <= LENGTH(inputString) DO
+			
+			-- Find next comma position
+			SET commaPosition = POSITION(',' IN inputString FROM currentPosition);
+			
+			-- if no comma found then take remainig string
+			IF commaPosition = 0 THEN
+				SET splittedString = SUBSTRING(inputString FROM currentPosition);
+				SET currentPosition = LENGTH(inputString) + 1;
+			ELSE
+				-- Extract substring from current position to (comm position - 1)
+				SET splittedString = SUBSTRING(inputString FROM currentPosition FOR (commaPosition - currentPosition));
+				SET currentPosition = commaPosition + 1;
+			END IF;
+			
+			SET OutputRoot.JSON.Data.responseString.outputStrings.String.Item[counter] = splittedString;
+			SET counter = counter + 1;
+			
+		END WHILE;	
+		
+		RETURN TRUE;
+	END;
+END MODULE;
