@@ -1,0 +1,33 @@
+BROKER SCHEMA com.logical.string
+
+CREATE COMPUTE MODULE CaseInsensitiveCompare_MF_CaseInsensitiveCompare
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		-- Declare a reference to the input string from JSON input message
+		DECLARE inputMessage REFERENCE TO InputRoot.JSON.Data.requestString;
+		
+		-- Extract the actual input string values
+		DECLARE inputString1 CHARACTER inputMessage.inputString1; 
+		DECLARE inputString2 CHARACTER inputMessage.inputString2; 
+		DECLARE isCaseInsensitive BOOLEAN FALSE;
+		
+		-- Compare strings ignoring case and set the match flag
+		IF UPPER(inputString1) = UPPER(inputString2) THEN
+			SET isCaseInsensitive = TRUE;
+		ELSE
+			SET isCaseInsensitive = FALSE;
+		END IF;
+		
+		-- Create JSON Data structure for the output
+		CREATE LASTCHILD OF OutputRoot.JSON DOMAIN('JSON') NAME 'Data';
+		
+		-- Create JSON response based on the conditions
+		IF isCaseInsensitive = TRUE THEN
+			SET OutputRoot.JSON.Data.responseString.outputStrings = 'Match Found, Case-Insensitive';
+		ELSE
+			SET OutputRoot.JSON.Data.responseString.outputStrings = 'Match Not Found';
+		END IF;
+		
+		RETURN TRUE;
+	END;
+END MODULE;
