@@ -1,0 +1,50 @@
+BROKER SCHEMA com.logical.string
+
+CREATE COMPUTE MODULE GetFirstNonRepeatingChar_MF_firstNonRepeatingCharFinder
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		-- Declare a reference to the input string from JSON input message
+		DECLARE inputMessage REFERENCE TO InputRoot.JSON.Data.requestString;
+		
+		-- Extract the input string from the message
+		DECLARE inputString CHARACTER FIELDVALUE(inputMessage.inputString);
+		
+		-- Get the length of the input string
+		DECLARE inputStringLength INTEGER LENGTH(inputString);
+		
+		-- Declare variables to hold characters and flags
+		DECLARE currentChar, nextChar CHARACTER '';
+		DECLARE isUniqueChar BOOLEAN;
+		DECLARE I,J INTEGER 1;
+		
+		-- Loop through each character of input string
+		X:WHILE I <= inputStringLength DO
+			SET currentChar = SUBSTRING(inputString FROM I FOR 1);
+			SET isUniqueChar = TRUE; -- Reset the uniqueness flag at each outer iteration
+			
+			-- Check if the current character appears again in the string
+			SET J = 1;
+			Y:WHILE J <= inputStringLength DO
+				IF J <> I AND SUBSTRING(inputString FROM J FOR 1) = currentChar THEN
+					SET isUniqueChar = FALSE;
+					LEAVE Y; -- Exit inner loop if duplicate found
+				END IF;
+				SET J = J + 1;
+			END WHILE;
+			
+			-- If the character is unique, save it and stop further checking
+			IF isUniqueChar THEN
+				SET nextChar = currentChar;
+				LEAVE X; -- Exit outer loop
+			END IF;
+			
+			SET I = I + 1;
+		END WHILE;
+
+		-- Create JSON structure for output message
+		CREATE LASTCHILD OF OutputRoot.JSON DOMAIN('JSON') NAME 'Data';
+		SET OutputRoot.JSON.Data.responseString.firstUniqueCharacter = nextChar;
+
+		RETURN TRUE;
+	END;
+END MODULE;
