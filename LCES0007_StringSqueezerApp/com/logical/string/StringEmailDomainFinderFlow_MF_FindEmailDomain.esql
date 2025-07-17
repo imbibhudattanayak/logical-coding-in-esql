@@ -1,0 +1,19 @@
+BROKER SCHEMA com.logical.string
+
+CREATE COMPUTE MODULE StringEmailDomainFinderFlow_MF_FindEmailDomain
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		-- Declare a reference to the input string from JSON input message
+		DECLARE inputMessage REFERENCE TO InputRoot.JSON.Data.requestString;
+		-- Declare variables for string processing
+		DECLARE inputString CHARACTER inputMessage.inputString;
+		DECLARE outputString CHARACTER '';
+		-- Remove all occurrences of ' ' from input string
+		SET outputString = REPLACE(inputString,' ','');
+		-- Create JSON output and set the final capitalized string
+		CREATE LASTCHILD OF OutputRoot.JSON DOMAIN('JSON') NAME 'Data';
+		SET OutputRoot.JSON.Data.responseString.outputString = outputString;
+
+		RETURN TRUE;
+	END;
+END MODULE;

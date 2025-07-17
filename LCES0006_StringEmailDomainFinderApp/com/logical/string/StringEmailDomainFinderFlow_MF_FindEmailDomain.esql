@@ -1,0 +1,24 @@
+BROKER SCHEMA com.logical.string
+
+CREATE COMPUTE MODULE StringEmailDomainFinderFlow_MF_FindEmailDomain
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		-- Declare a reference to the input string from JSON input message
+		DECLARE inputMessage REFERENCE TO InputRoot.JSON.Data.requestString;
+		
+		DECLARE emailID CHARACTER FIELDVALUE(inputMessage.emailString);
+		DECLARE domainString CHARACTER;
+		
+		IF emailID IS NOT NULL AND POSITION('@' IN emailID) > 0 THEN
+			-- Extract the String after '@'
+			SET domainString = SUBSTRING(emailID FROM POSITION('@' IN emailID)+1);
+		ELSE
+			SET domainString = 'Invalid Email Format';
+		END IF; 
+		
+		-- Create JSON output and set domain string extracted.
+		CREATE LASTCHILD OF OutputRoot.JSON DOMAIN('JSON') NAME 'Data';
+		SET OutputRoot.JSON.Data.responseString.domainString = domainString;
+		RETURN TRUE;
+	END;
+END MODULE;

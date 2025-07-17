@@ -1,0 +1,53 @@
+BROKER SCHEMA com.logical.string
+
+CREATE COMPUTE MODULE SplitCommaDelimitedString_MF_SplitCommaDelimitedString
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		-- Declare a reference to the input string from JSON input message
+		DECLARE inputMessage REFERENCE TO InputRoot.JSON.Data.requestString;
+		
+		-- Extract the actual input string value
+		DECLARE inputString CHARACTER inputMessage.inputString;
+		
+		-- Initialize position and counter variables
+		DECLARE currentPosition, counter INTEGER 1;
+		DECLARE commaPosition INTEGER 1;
+		DECLARE splittedString CHARACTER;
+		
+		-- Create JSON Data structure for the output
+		CREATE LASTCHILD OF OutputRoot.JSON DOMAIN('JSON') NAME 'Data';
+		
+		-- Create a JSON array to hold the split strings
+		CREATE FIELD OutputRoot.JSON.Data.responseString.outputStrings.String IDENTITY (JSON.Array)String;
+		
+		-- Loop until the end of the input string
+		WHILE currentPosition <= LENGTH(inputString) DO
+			
+			-- Find position of next comma starting from current position
+			SET commaPosition = POSITION(',' IN inputString FROM currentPosition);
+			
+			-- If no more commas, take the remaining substring
+			IF commaPosition = 0 THEN
+				SET splittedString = SUBSTRING(inputString FROM currentPosition);
+				
+				-- Move position beyond end to exit loop
+				SET currentPosition = LENGTH(inputString) + 1;
+			ELSE
+				-- Extract the substring between current position and comma
+				SET splittedString = SUBSTRING(inputString FROM currentPosition FOR (commaPosition - currentPosition));
+				
+				-- Move position to character after comma
+				SET currentPosition = commaPosition + 1;
+			END IF;
+			
+			-- Assign each split string to the output JSON array
+			SET OutputRoot.JSON.Data.responseString.outputStrings.String.Item[counter] = splittedString;
+			
+			-- Increment counter for next array index
+			SET counter = counter + 1;
+			
+		END WHILE;	
+		
+		RETURN TRUE;
+	END;
+END MODULE;
